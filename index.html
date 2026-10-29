@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="am">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ኦዲዮ መጽሐፍት</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#faf6ee;--card:#fff;--ink:#2b2118;--muted:#7a6a58;--brand:#8a4b1f;--brand2:#b5651d;--line:#e8dfd0}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Noto Sans Ethiopic',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+header{background:var(--brand);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+header h1{margin:0;font-size:20px;cursor:pointer}
+nav button{background:transparent;color:#fff;border:1px solid #ffffff66;padding:6px 12px;border-radius:8px;margin-left:6px;font:inherit;cursor:pointer}
+main{max-width:900px;margin:0 auto;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.cover{height:130px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;text-align:center;padding:10px;margin-bottom:10px}
+.price{font-weight:700;color:var(--brand)}
+button.btn{background:var(--brand);color:#fff;border:0;padding:10px 16px;border-radius:10px;font:inherit;cursor:pointer;width:100%;margin-top:8px}
+button.btn.alt{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+button.btn.red{background:#a32d2d}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;margin:6px 0}
+.msg{padding:10px;border-radius:10px;margin:10px 0;background:#fff3d6}
+.msg.err{background:#fde0e0}.msg.ok{background:#dff3df}
+.muted{color:var(--muted);font-size:14px}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px}
+.pending{background:#fff3d6}.approved{background:#dff3df}.rejected{background:#fde0e0}
+.player{position:relative;margin-top:10px}
+.player audio{width:100%}
+.wm{position:absolute;left:0;top:-4px;font-size:11px;color:#0000002e;pointer-events:none;white-space:nowrap;animation:mv 18s linear infinite}
+@keyframes mv{0%{left:0}50%{left:55%}100%{left:0}}
+.back{background:none;border:0;color:var(--brand);font:inherit;cursor:pointer;padding:0;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1 onclick="go('home')">🎧 ኦዲዮ መጽሐፍት</h1>
+  <nav id="nav"></nav>
+</header>
+<main id="app">በመጫን ላይ...</main>
+
+<script>
+/* ====== እዚህ ጋር የራስህን መረጃ አስገባ ====== */
+const SUPABASE_URL = 'https://bslpolddamiqaordzfbc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_qrehOm8Kff_LYSCyiBwA0g_ufNcT5Mk';
+const TELEBIRR_NUMBER = '0942617521';
+const TELEBIRR_NAME   = 'Mikale';
+const CBE_ACCOUNT     = '';   // ባዶ ከሆነ ንግድ ባንክ አይታይም። ቁጥሩን ሲኖርህ እዚህ አስገባ
+const CBE_NAME        = '';
+const CONTACT         = 'ለእርዳታ: 0942617521';
+/* ======================================== */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = s => document.querySelector(s);
+const app = $('#app');
+let session = null, isAdmin = false, books = [], myOrders = [];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const statusAm = {pending:'በመጠባበቅ ላይ', approved:'ተረጋግጧል', rejected:'ተቀባይነት አላገኘም'};
+
+async function init(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  sb.auth.onAuthStateChange((_e, s) => { session = s; });
+  await refresh();
+  go('home');
+}
+async function refresh(){
+  const b = await sb.from('books').select('*').eq('active', true).order('created_at');
+  books = b.data || [];
+  isAdmin = false; myOrders = [];
+  if (session){
+    const a = await sb.from('admins').select('user_id').maybeSingle();
+    isAdmin = !!a.data;
+    const o = await sb.from('orders').select('*').eq('user_id', session.user.id);
+    myOrders = o.data || [];
+  }
+  renderNav();
+}
+function renderNav(){
+  $('#nav').innerHTML = session
+    ? `<button onclick="go('library')">የእኔ መጽሐፍት</button>${isAdmin?`<button onclick="go('admin')">አድሚን</button>`:''}<button onclick="logout()">ውጣ</button>`
+    : `<button onclick="go('login')">ግባ / ተመዝገብ</button>`;
+}
+function orderFor(bookId){
+  const list = myOrders.filter(o => o.book_id === bookId);
+  return list.find(o => o.status==='approved') || list.find(o => o.status==='pending') || list[0];
+}
+function go(view, arg){
+  window.scrollTo(0,0);
+  ({home, login, library, admin, book})[view](arg);
+}
+
+/* ---------- መነሻ ---------- */
+function home(){
+  app.innerHTML = `
+    <h2>የኦዲዮ መጽሐፍት ስብስብ</h2>
+    <p class="muted">መጽሐፉን ገዝተው በድረ-ገጹ ላይ ያዳምጡ።</p>
+    <div class="grid">${books.map(b => `
+      <div class="card">
+        <div class="cover">${esc(b.title)}</div>
+        <div class="muted">${esc(b.author)}</div>
+        <p>${esc(b.description)}</p>
+        <div class="price">${Number(b.price).toLocaleString()} ብር</div>
+        <button class="btn" onclick="go('book','${b.id}')">ዝርዝር እና ግዛ</button>
+      </div>`).join('') || '<p>ገና መጽሐፍ አልተጨመረም።</p>'}
+    </div>`;
+}
+
+/* ---------- መግቢያ ---------- */
+function login(){
+  app.innerHTML = `
+    <div class="card" style="max-width:420px;margin:auto">
+      <h2>ግባ ወይም ተመዝገብ</h2>
+      <input id="em" type="email" placeholder="ኢሜይል">
+      <input id="pw" type="password" placeholder="የይለፍ ቃል (ቢያንስ 6 ፊደል)">
+      <div id="lmsg"></div>
+      <button class="btn" onclick="doLogin()">ግባ</button>
+      <button class="btn alt" onclick="doSignup()">አዲስ መለያ ክፈት</button>
+    </div>`;
+}
+async function doLogin(){
+  const { error } = await sb.auth.signInWithPassword({ email: $('#em').value.trim(), password: $('#pw').value });
+  if (error) return $('#lmsg').innerHTML = `<div class="msg err">ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።</div>`;
+  const { data } = await sb.auth.getSession(); session = data.session;
+  await refresh(); go('library');
+}
+async function doSignup(){
+  const { data, error } = await sb.auth.signUp({ email: $('#em').value.trim(), password: $('#pw').value });
+  if (error) return $('#lmsg').innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  if (!data.session) return $('#lmsg').innerHTML = `<div class="msg ok">መለያ ተከፍቷል። ኢሜይልዎን ያረጋግጡና ይግቡ።</div>`;
+  session = data.session; await refresh(); go('home');
+}
+async function logout(){ await sb.auth.signOut(); session = null; await refresh(); go('home'); }
+
+/* ---------- የመጽሐፍ ዝርዝር እና ክፍያ ---------- */
+function book(id){
+  const b = books.find(x => x.id === id); const o = orderFor(id);
+  let action = '';
+  if (!session) action = `<div class="msg">ለመግዛት መጀመሪያ <a href="#" onclick="go('login');return false">ይግቡ</a>።</div>`;
+  else if (o && o.status==='approved') action = `<button class="btn" onclick="go('library')">አሁን አዳምጥ ▶</button>`;
+  else if (o && o.status==='pending') action = `<div class="msg">ክፍያዎ እየተረጋገጠ ነው። ብዙውን ጊዜ በጥቂት ሰዓታት ውስጥ ይጸድቃል።</div>`;
+  else action = `
+    ${o && o.status==='rejected' ? '<div class="msg err">የቀድሞ ክፍያዎ ተቀባይነት አላገኘም። እባክዎ እንደገና ይሞክሩ።</div>':''}
+    <h3>እንዴት ይከፍላሉ?</h3>
+    <ol>
+      <li><b>ቴሌብር:</b> ${Number(b.price).toLocaleString()} ብር ወደ <b>${esc(TELEBIRR_NUMBER)}</b> (${esc(TELEBIRR_NAME)}) ይላኩ።</li>
+      ${CBE_ACCOUNT ? `<li><b>ንግድ ባንክ:</b> ወደ ሂሳብ ቁጥር <b>${esc(CBE_ACCOUNT)}</b> (${esc(CBE_NAME)}) ያስተላልፉ።</li>` : ''}
+      <li>የደረሰኝ/የግብይት ቁጥሩን ከታች ያስገቡ።</li>
+    </ol>
+    <select id="meth"><option value="telebirr">ቴሌብር</option>${CBE_ACCOUNT ? '<option value="cbe">ንግድ ባንክ</option>' : ''}</select>
+    <input id="ref" placeholder="የግብይት / ደረሰኝ ቁጥር">
+    <div id="omsg"></div>
+    <button class="btn" onclick="submitOrder('${b.id}')">ክፍያ ፈጽሜያለሁ</button>
+    <p class="muted">${esc(CONTACT)}</p>`;
+  app.innerHTML = `
+    <button class="back" onclick="go('home')">← ወደ ዝርዝር</button>
+    <div class="card"><div class="cover">${esc(b.title)}</div>
+      <div class="muted">${esc(b.author)}</div><p>${esc(b.description)}</p>
+      <div class="price">${Number(b.price).toLocaleString()} ብር</div>${action}</div>`;
+}
+async function submitOrder(bookId){
+  const reference = $('#ref').value.trim();
+  if (reference.length < 4) return $('#omsg').innerHTML = `<div class="msg err">የግብይት ቁጥር ያስገቡ።</div>`;
+  const { error } = await sb.from('orders').insert({ user_id: session.user.id, book_id: bookId, method: $('#meth').value, reference, user_email: session.user.email });
+  if (error) return $('#omsg').innerHTML = `<div class="msg err">ስህተት ተፈጥሯል፣ እንደገና ይሞክሩ።</div>`;
+  await refresh(); go('book', bookId);
+}
+
+/* ---------- የገዢ ቤተ-መጽሐፍት እና ማጫወቻ ---------- */
+function library(){
+  if (!session) return go('login');
+  const mine = books.filter(b => orderFor(b.id));
+  app.innerHTML = `<h2>የእኔ መጽሐፍት</h2>` + (mine.map(b => {
+    const o = orderFor(b.id);
+    return `<div class="card" style="margin-bottom:12px">
+      <b>${esc(b.title)}</b> <span class="tag ${o.status}">${statusAm[o.status]}</span>
+      <div id="pl-${b.id}">${o.status==='approved' ? `<button class="btn" onclick="play('${b.id}')">▶ አዳምጥ</button>` : ''}</div>
+    </div>`; }).join('') || '<p>ገና ምንም አልገዙም።</p>');
+}
+async function play(id){
+  const b = books.find(x => x.id === id);
+  const box = $('#pl-' + id); box.innerHTML = '<p class="muted">በመጫን ላይ...</p>';
+  const { data, error } = await sb.storage.from('audio').createSignedUrl(b.audio_path, 60 * 60);
+  if (error) return box.innerHTML = `<div class="msg err">ማጫወት አልተቻለም። እባክዎ ያነጋግሩን።</div>`;
+  box.innerHTML = `<div class="player"><span class="wm">${esc(session.user.email)}</span>
+    <audio id="au" controls controlsList="nodownload noplaybackrate" preload="metadata" src="${data.signedUrl}"></audio></div>
+    <p class="muted">ይህ መጽሐፍ ለእርስዎ ብቻ የተፈቀደ ነው። ማጋራት አይፈቀድም።</p>`;
+  const au = $('#au');
+  au.addEventListener('contextmenu', e => e.preventDefault());
+  // ጊዜው ካለፈ አዲስ ሊንክ ይጠይቃል
+  au.addEventListener('error', async () => {
+    const t = au.currentTime;
+    const r = await sb.storage.from('audio').createSignedUrl(b.audio_path, 3600);
+    if (r.data){ au.src = r.data.signedUrl; au.currentTime = t; au.play(); }
+  });
+}
+document.addEventListener('contextmenu', e => { if (e.target.tagName === 'AUDIO') e.preventDefault(); });
+
+/* ---------- አድሚን ---------- */
+async function admin(){
+  if (!isAdmin) return go('home');
+  const { data } = await sb.from('orders').select('*, books(title)').order('created_at', { ascending: false });
+  app.innerHTML = `<h2>የክፍያ ማረጋገጫ</h2>` + ((data || []).map(o => `
+    <div class="card" style="margin-bottom:10px">
+      <b>${esc(o.books?.title)}</b> <span class="tag ${o.status}">${statusAm[o.status]}</span><br>
+      <span class="muted">${o.method==='telebirr'?'ቴሌብር':'ንግድ ባንክ'} · ቁጥር: <b>${esc(o.reference)}</b> · ${new Date(o.created_at).toLocaleString('am-ET')}</span><br>
+      <span class="muted">ተጠቃሚ: ${esc(o.user_email)}</span>
+      ${o.status==='pending' ? `
+        <button class="btn" onclick="setStatus('${o.id}','approved')">አጽድቅ ✔</button>
+        <button class="btn red" onclick="setStatus('${o.id}','rejected')">ውድቅ አድርግ ✖</button>` : ''}
+    </div>`).join('') || '<p>ምንም ጥያቄ የለም።</p>');
+}
+async function setStatus(id, status){
+  await sb.from('orders').update({ status }).eq('id', id);
+  admin();
+}
+
+init();
+</script>
+</body>
+</html>
