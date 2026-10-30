@@ -118,6 +118,43 @@ input,select{background:#0f0c14;color:var(--ink);border-color:var(--line)}
   .slide p{margin-left:0}
   .slide button.btn,.slide .msg{margin-left:0}
 }
+
+/* ===== ተጨማሪ ክፍሎች (ከስሩ) ===== */
+.bleed{width:100vw;margin-left:calc(50% - 50vw);position:relative;overflow:hidden}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.sec-t{font:700 clamp(28px,7vw,44px)/1.2 'Noto Serif Ethiopic','Noto Sans Ethiopic',serif;color:#f6ecd2;text-align:center;margin:0 0 6px}
+.sec-s{text-align:center;color:var(--muted);margin:0 0 26px}
+.marq{padding:46px 0 10px;white-space:nowrap}
+.marq-t{display:inline-block;font:700 clamp(70px,24vw,210px)/1 'Noto Serif Ethiopic','Noto Sans Ethiopic',serif;color:transparent;-webkit-text-stroke:1.5px rgba(216,178,90,.55);will-change:transform}
+.marq-t b{color:#f6ecd2;-webkit-text-stroke:0}
+.planet{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 22%,#000 62%,transparent);mask-image:linear-gradient(to bottom,transparent,#000 22%,#000 62%,transparent);height:78vh;min-height:460px;display:flex;align-items:flex-start;justify-content:center;padding-top:12vh;text-align:center}
+.planet::before{content:"";position:absolute;left:50%;top:48%;width:190vw;height:190vw;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle at 50% 0%,rgba(216,178,90,.28),#0b0810 48%);border-top:2px solid rgba(255,232,180,.85);box-shadow:0 -18px 90px rgba(216,178,90,.5),inset 0 30px 80px rgba(216,178,90,.12)}
+.planet>div{position:relative;z-index:1;padding:0 22px}
+.planet h2{font:700 clamp(30px,8vw,54px)/1.25 'Noto Serif Ethiopic','Noto Sans Ethiopic',serif;color:#f6ecd2;margin:0 0 10px}
+.planet h2 em{font-style:normal;color:var(--brand)}
+.planet p{color:#cfc4ad;max-width:38ch;margin:0 auto}
+.gl{background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015));border:1px solid rgba(216,178,90,.22);border-radius:18px;padding:20px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 14px 40px rgba(0,0,0,.45);transition:border-color .3s,box-shadow .3s}
+.gl:hover{border-color:rgba(216,178,90,.6);box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 30px rgba(216,178,90,.18)}
+.steps{display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:820px){.steps{grid-template-columns:repeat(3,1fr)}}
+.steps .n{font:700 40px/1 'Noto Serif Ethiopic',serif;color:var(--brand);opacity:.85}
+.steps h3{margin:8px 0 4px;color:#f6ecd2}
+.steps p{margin:0;color:#cfc4ad;font-size:15px}
+.sec{padding:60px 0 10px}
+.books-g{display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:700px){.books-g{grid-template-columns:1fr 1fr}}
+.books-g .gl b{color:#f6ecd2}
+.faq details{margin-bottom:10px;padding:0}
+.faq summary{cursor:pointer;list-style:none;padding:16px 46px 16px 18px;font-weight:600;color:#f6ecd2;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:24px;color:var(--brand);transition:transform .25s}
+.faq details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+.faq details p{margin:0;padding:0 18px 16px;color:#cfc4ad}
+.cta{text-align:center;padding:70px 0 40px}
+.cta .huge{font:700 clamp(54px,19vw,150px)/1 'Noto Serif Ethiopic','Noto Sans Ethiopic',serif;background:linear-gradient(180deg,#fff3d0,#d8b25a 60%,#8f7230);-webkit-background-clip:text;background-clip:text;color:transparent;margin:0 0 10px;filter:drop-shadow(0 0 28px rgba(216,178,90,.35))}
+.cta .big{font:700 clamp(30px,8vw,44px) 'Noto Serif Ethiopic',serif;color:var(--brand);margin-bottom:8px}
+.cta button.btn,.cta .msg{max-width:360px;margin-left:auto;margin-right:auto}
+.reveal{transform:translateY(30px)}
 </style>
 </head>
 <body>
@@ -199,7 +236,7 @@ function initFx(){
   try {
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     initBook(reduce);
-    const cards = document.querySelectorAll('#app .card');
+    const cards = document.querySelectorAll('#app .card, #app .gl');
     if (!reduce && 'IntersectionObserver' in window){
       const io = new IntersectionObserver(es => es.forEach(en => {
         if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
@@ -262,6 +299,10 @@ function initBook(reduce){
       el.style.transform = `translateY(${(1 - w) * 28}px)`;
       el.style.pointerEvents = w > .6 ? 'auto' : 'none';
     });
+    document.querySelectorAll('.marq-t').forEach(el => {
+      const rr = el.parentElement.getBoundingClientRect();
+      el.style.transform = `translateX(${(rr.top - innerHeight / 2) * (el.dataset.dir === 'r' ? -.9 : .9)}px)`;
+    });
     requestAnimationFrame(frame);
   })(performance.now());
 }
@@ -296,12 +337,36 @@ function home(){
         ${action}
         ${myStatus === 'rejected' ? '<div class="msg err">የቀድሞ ክፍያዎ ተቀባይነት አላገኘም። እባክዎ እንደገና ይሞክሩ።</div>' : ''}</div>
     </div></section>
-    ${socialHtml()}
-    ${books.map((b, i) => `
-      <div class="card"><b>${i + 1}. ${esc(b.title)}</b>
-        <div class="muted">${esc(b.author)}</div>
-        <p style="margin:6px 0 0">${esc(b.description)}</p></div>`).join('')}
-    <p class="muted" style="text-align:center">ምዝገባ፣ ኢሜይል ወይም ስልክ ቁጥር አያስፈልግም።</p>`;
+    <div class="bleed marq" aria-hidden="true"><div class="marq-t" data-dir="l"><b>ግምጃዬ</b> ግምጃዬ ግምጃዬ</div></div>
+    <div class="bleed planet"><div><h2>ታሪኩን በ<em>ድምፅ</em> ያድምጡ</h2><p>${books.length || 4} የኦዲዮ መጽሐፍት፣ አንድ ስብስብ። በማንኛውም ጊዜ፣ በስልክዎ።</p></div></div>
+    <section class="sec wrap">
+      <h2 class="sec-t">እንዴት ይሰራል?</h2><p class="sec-s">በሦስት ቀላል እርምጃዎች</p>
+      <div class="steps">
+        <div class="gl"><div class="n">01</div><h3>ይክፈሉ</h3><p>${fmt(BUNDLE_PRICE)} ብር ወደ ${esc(TELEBIRR_NUMBER)} (${esc(TELEBIRR_NAME)}) ይላኩ።</p></div>
+        <div class="gl"><div class="n">02</div><h3>ቁጥሩን ያስገቡ</h3><p>በደረሰኙ ላይ ያለውን የግብይት ቁጥር ብቻ ያስገቡ።</p></div>
+        <div class="gl"><div class="n">03</div><h3>ያዳምጡ</h3><p>ክፍያዎ ሲጸድቅ ሁሉንም መጽሐፍት በገጹ ላይ ያዳምጡ።</p></div>
+      </div>
+    </section>
+    <section class="sec wrap">
+      <h2 class="sec-t">የስብስቡ መጽሐፍት</h2><p class="sec-s">ሁሉም በአንድ ክፍያ</p>
+      <div class="books-g">${books.map((b, i) => `
+        <div class="gl"><b>${i + 1}. ${esc(b.title)}</b>
+          <div class="muted">${esc(b.author)}</div>
+          <p style="margin:6px 0 0;color:#cfc4ad">${esc(b.description)}</p></div>`).join('')}</div>
+    </section>
+    <section class="sec wrap faq">
+      <h2 class="sec-t">ተደጋጋሚ ጥያቄዎች</h2><p class="sec-s">&nbsp;</p>
+      <details class="gl"><summary>ማውረድ እችላለሁ?</summary><p>አይቻልም። ኦዲዮው በዚህ ገጽ ላይ በድምፅ ብቻ ይደመጣል።</p></details>
+      <details class="gl"><summary>ምዝገባ ወይም ኢሜይል ያስፈልጋል?</summary><p>አያስፈልግም። የግብይት ቁጥሩን ብቻ ያስገባሉ።</p></details>
+      <details class="gl"><summary>ክፍያዬ መቼ ይጸድቃል?</summary><p>ብዙውን ጊዜ በጥቂት ሰዓታት ውስጥ ይጸድቃል። ከዚያ ይህን ገጽ ከፍተው "አዳምጥ" ን ይንኩ።</p></details>
+      <details class="gl"><summary>ስልክ ብቀይርስ?</summary><p>አንድ ክፍያ በአንድ ስልክ ላይ ብቻ ይሰራል። ስልክ ከቀየሩ ያነጋግሩን፤ ${esc(CONTACT)}</p></details>
+    </section>
+    <section class="cta wrap">
+      <div class="huge">እንጀምር</div>
+      <div class="big">${fmt(BUNDLE_PRICE)} ብር</div>
+      ${action}
+      <div style="margin-top:22px">${socialHtml()}</div>
+    </section>`;
   initFx();
 }
 
