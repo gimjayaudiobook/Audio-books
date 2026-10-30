@@ -129,7 +129,7 @@ function home(){
   else action = `<button class="btn" onclick="go('buy')">ግዛ — ${fmt(BUNDLE_PRICE)} ብር</button>`;
   app.innerHTML = `
     ${anonFailed ? '<div class="msg err">ድረ-ገጹ ገና አልተዘጋጀም (Anonymous sign-ins አልበራም)።</div>' : ''}
-    <img class="cover-img" src="cover.jpg" width="900" height="900" alt="ግምጃዬ — Audiobook Edition" onerror="this.remove()">
+    <img class="cover-img" src="cover.jpeg" width="900" height="900" alt="ግምጃዬ — Audiobook Edition" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='cover.jpg'}else{this.remove()}">
     <div class="hero">
       <h2>ግምጃዬ</h2>
       <div>ሙሉ ስብስብ · ${books.length || 4} የኦዲዮ መጽሐፍት በአንድ ላይ</div>
