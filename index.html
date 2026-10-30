@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ኦዲዮ መጽሐፍት</title>
+<title>ግምጃዬ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -21,7 +21,7 @@ main{max-width:700px;margin:0 auto;padding:16px}
 footer{text-align:center;padding:20px;font-size:13px;color:var(--muted)}
 footer a{color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
-.hero{background:linear-gradient(to bottom,rgba(60,30,10,0) 30%,rgba(60,30,10,.93) 82%),url('bg.jpg') center 15%/cover no-repeat,var(--brand);color:#fff;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;min-height:440px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.hero{background:linear-gradient(to bottom,rgba(60,30,10,0) 30%,rgba(60,30,10,.93) 82%),url('bg.jpg') center 15%/cover no-repeat,var(--brand);color:#fff;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;min-height:340px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
 .hero h2{margin:0 0 4px}
 .hero .big{font-size:34px;font-weight:700}
 .price{font-weight:700;color:var(--brand)}
@@ -41,15 +41,19 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 @keyframes mv{0%{left:0}50%{left:55%}100%{left:0}}
 .back{background:none;border:0;color:var(--brand);font:inherit;cursor:pointer;padding:0;margin-bottom:10px}
 a{color:var(--brand)}
+.cover-img{display:block;width:100%;height:auto;max-width:520px;margin:0 auto 14px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+.social{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:0 0 14px}
+.social a{background:#fff;border:1px solid var(--line);border-radius:99px;padding:8px 16px;text-decoration:none;font-weight:600;color:var(--brand)}
+footer .social{margin:0 0 10px}
 </style>
 </head>
 <body>
 <header>
-  <h1 onclick="go('home')">🎧 ኦዲዮ መጽሐፍት</h1>
+  <h1 onclick="go('home')">🎧 ግምጃዬ</h1>
   <nav id="nav"></nav>
 </header>
 <main id="app">በመጫን ላይ...</main>
-<footer><a href="#" onclick="go('adminLogin');return false">አድሚን</a></footer>
+<footer><div id="social-foot"></div><a href="#" onclick="go('adminLogin');return false">አድሚን</a></footer>
 
 <script>
 /* ====== እዚህ ጋር የራስህን መረጃ አስገባ ====== */
@@ -61,6 +65,8 @@ const TELEBIRR_NAME   = 'Mikale';
 const CBE_ACCOUNT     = '';   // ባዶ ከሆነ ንግድ ባንክ አይታይም። ቁጥሩን ሲኖርህ እዚህ አስገባ
 const CBE_NAME        = '';
 const CONTACT         = 'ለእርዳታ: 0942617521';
+/* የማህበራዊ ሚዲያ ሊንኮች: ሙሉ አድራሻ (https://...) አስገባ። ባዶ ከሆነ ቁልፉ አይታይም */
+const SOCIAL = { youtube: '', instagram: '', tiktok: '' };
 /* ======================================== */
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -70,8 +76,16 @@ let session = null, isAdmin = false, books = [], myStatus = 'none', anonFailed =
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusAm = {pending:'በመጠባበቅ ላይ', approved:'ተረጋግጧል', rejected:'ተቀባይነት አላገኘም'};
 const fmt = n => Number(n).toLocaleString();
+function socialHtml(){
+  const items = [['youtube','▶ YouTube'],['instagram','📷 Instagram'],['tiktok','🎵 TikTok']]
+    .filter(([k]) => /^https:\/\//.test(SOCIAL[k] || ''));
+  if (!items.length) return '';
+  return `<div class="social">${items.map(([k, l]) =>
+    `<a href="${esc(SOCIAL[k])}" target="_blank" rel="noopener noreferrer">${l}</a>`).join('')}</div>`;
+}
 
 async function init(){
+  $('#social-foot').innerHTML = socialHtml();
   const { data } = await sb.auth.getSession();
   session = data.session;
   if (!session){
@@ -115,13 +129,15 @@ function home(){
   else action = `<button class="btn" onclick="go('buy')">ግዛ — ${fmt(BUNDLE_PRICE)} ብር</button>`;
   app.innerHTML = `
     ${anonFailed ? '<div class="msg err">ድረ-ገጹ ገና አልተዘጋጀም (Anonymous sign-ins አልበራም)።</div>' : ''}
+    <img class="cover-img" src="cover.jpg" width="900" height="900" alt="ግምጃዬ — Audiobook Edition" onerror="this.remove()">
     <div class="hero">
-      <h2>ሙሉ ስብስብ</h2>
-      <div>${books.length || 4} የኦዲዮ መጽሐፍት በአንድ ላይ</div>
+      <h2>ግምጃዬ</h2>
+      <div>ሙሉ ስብስብ · ${books.length || 4} የኦዲዮ መጽሐፍት በአንድ ላይ</div>
       <div class="big">${fmt(BUNDLE_PRICE)} ብር</div>
       ${action}
       ${myStatus === 'rejected' ? '<div class="msg err" style="color:var(--ink)">የቀድሞ ክፍያዎ ተቀባይነት አላገኘም። እባክዎ እንደገና ይሞክሩ።</div>' : ''}
     </div>
+    ${socialHtml()}
     ${books.map((b, i) => `
       <div class="card"><b>${i + 1}. ${esc(b.title)}</b>
         <div class="muted">${esc(b.author)}</div>
