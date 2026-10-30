@@ -126,7 +126,7 @@ function home(){
       <div class="card"><b>${i + 1}. ${esc(b.title)}</b>
         <div class="muted">${esc(b.author)}</div>
         <p style="margin:6px 0 0">${esc(b.description)}</p></div>`).join('')}
-    ${myStatus === 'none' || myStatus === 'rejected' ? `<p class="muted" style="text-align:center">ቀድሞ ከፍለዋል? <a href="#" onclick="go('claim');return false">በሌላ ስልክ ያዳምጡ</a></p>` : ''}
+    ${myStatus === 'none' || myStatus === 'rejected' ? `<p class="muted" style="text-align:center">ስልክ ቀይረዋል? <a href="#" onclick="go('claim');return false">እዚህ ይመለሱ</a></p>` : ''}
     <p class="muted" style="text-align:center">ምዝገባ፣ ኢሜይል ወይም ስልክ ቁጥር አያስፈልግም።</p>`;
 }
 
@@ -145,7 +145,7 @@ function buy(){
       <input id="ref" placeholder="የግብይት ቁጥር (ከደረሰኙ)" autocomplete="off">
       <div id="omsg"></div>
       <button class="btn" onclick="submitOrder()">ክፍያ ፈጽሜያለሁ</button>
-      <p class="muted">የደረሰኝ ቁጥርዎን ያስቀምጡ፤ በሌላ ስልክ ለማዳመጥ ይጠቅምዎታል።<br>${esc(CONTACT)}</p>
+      <p class="muted">ይህ ግዢ በዚህ ስልክ ላይ ብቻ ይሰራል (አንድ ክፍያ = አንድ ስልክ)። የደረሰኝ ቁጥርዎን ያስቀምጡ፤ ስልክ ከቀየሩ ያነጋግሩን።<br>${esc(CONTACT)}</p>
     </div>`;
 }
 async function submitOrder(){
@@ -164,8 +164,8 @@ function claim(){
   app.innerHTML = `
     <button class="back" onclick="go('home')">← ተመለስ</button>
     <div class="card">
-      <h2 style="margin-top:0">በሌላ ስልክ ያዳምጡ</h2>
-      <p class="muted">ሲከፍሉ ያስገቡትን የግብይት ቁጥር ያስገቡ። (በአንድ ክፍያ እስከ 3 መሣሪያ)</p>
+      <h2 style="margin-top:0">ስልክ ቀይረዋል?</h2>
+      <p class="muted">አንድ ክፍያ በአንድ ስልክ ላይ ብቻ ይሰራል። ወደ አዲስ ስልክ ለመመለስ መጀመሪያ እኛን ያነጋግሩ፣ ከቀድሞ ስልክዎ እናላቅቃለን፤ ከዚያ እዚህ የግብይት ቁጥርዎን ያስገቡ።<br>${esc(CONTACT)}</p>
       <input id="ref" placeholder="የግብይት ቁጥር" autocomplete="off">
       <div id="cmsg"></div>
       <button class="btn" onclick="doClaim()">አረጋግጥ</button>
@@ -176,7 +176,7 @@ async function doClaim(){
   const { data, error } = await sb.rpc('claim_access', { p_ref: $('#ref').value });
   if (error || data === 'no_session') return show('ስህተት ተፈጥሯል፣ እንደገና ይሞክሩ።');
   if (data === 'not_found') return show('ይህ የግብይት ቁጥር አልተገኘም።');
-  if (data === 'limit') return show('ይህ ክፍያ በ3 መሣሪያዎች ላይ ቀድሞ ጥቅም ላይ ውሏል።');
+  if (data === 'limit') return show('ይህ ክፍያ ቀድሞ በሌላ ስልክ ላይ ጥቅም ላይ ውሏል። ስልክ ከቀየሩ ያነጋግሩን።');
   await loadStatus();
   go('home');
 }
@@ -199,7 +199,7 @@ function library(){
 async function play(id){
   const b = books.find(x => x.id === id);
   const box = $('#pl-' + id); box.innerHTML = '<p class="muted">በመጫን ላይ...</p>';
-  const { data, error } = await sb.storage.from('audio').createSignedUrl(b.audio_path, 3600);
+  const { data, error } = await sb.storage.from('audio').createSignedUrl(b.audio_path, 900);
   if (error) return box.innerHTML = `<div class="msg err">ማጫወት አልተቻለም። ኦዲዮው ገና ላይጫን ይችላል፤ እባክዎ ያነጋግሩን።</div>`;
   const code = session ? session.user.id.slice(0, 6) : '';
   box.innerHTML = `<div class="player"><span class="wm">${esc(code)}</span>
@@ -208,7 +208,7 @@ async function play(id){
   au.addEventListener('contextmenu', e => e.preventDefault());
   au.addEventListener('error', async () => {
     const t = au.currentTime;
-    const r = await sb.storage.from('audio').createSignedUrl(b.audio_path, 3600);
+    const r = await sb.storage.from('audio').createSignedUrl(b.audio_path, 900);
     if (r.data){ au.src = r.data.signedUrl; au.currentTime = t; au.play(); }
   });
 }
@@ -250,11 +250,17 @@ async function admin(){
       ${o.status==='pending' ? `
         <button class="btn" onclick="setStatus('${o.id}','approved')">አጽድቅ ✔</button>
         <button class="btn red" onclick="setStatus('${o.id}','rejected')">ውድቅ አድርግ ✖</button>` : ''}
+      ${o.status==='approved' ? `<button class="btn alt" onclick="resetDevice('${o.id}')">ስልክ ቀይር (ከቀድሞ ስልክ አላቅቅ)</button>` : ''}
     </div>`).join('') || '<p>ምንም ጥያቄ የለም።</p>');
 }
 async function setStatus(id, status){
   await sb.from('orders').update({ status }).eq('id', id);
   admin();
+}
+async function resetDevice(id){
+  if (!confirm('ይህን ክፍያ ከቀድሞ ስልኩ ልታላቅቀው ነው። ገዢው በአዲስ ስልክ በግብይት ቁጥሩ መመለስ ይችላል። ይቀጥል?')) return;
+  const { error } = await sb.from('grants').delete().eq('order_id', id);
+  alert(error ? 'አልተሳካም፣ እንደገና ይሞክሩ።' : 'ተላቅቋል። ገዢው አሁን በአዲስ ስልክ በግብይት ቁጥሩ መመለስ ይችላል።');
 }
 
 init();
