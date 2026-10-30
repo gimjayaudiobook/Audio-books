@@ -224,7 +224,6 @@ function home(){
         <div class="face bottom"></div>
       </div>
     </div>
-    <p class="muted hint">👆 መጽሐፉን ጎትተው ያሽከርክሩት</p>
     <div class="hero">
       <h2>ግምጃዬ</h2>
       <div>ሙሉ ስብስብ · ${books.length || 4} የኦዲዮ መጽሐፍት በአንድ ላይ</div>
@@ -237,7 +236,6 @@ function home(){
       <div class="card"><b>${i + 1}. ${esc(b.title)}</b>
         <div class="muted">${esc(b.author)}</div>
         <p style="margin:6px 0 0">${esc(b.description)}</p></div>`).join('')}
-    ${myStatus === 'none' || myStatus === 'rejected' ? `<p class="muted" style="text-align:center">ስልክ ቀይረዋል? <a href="#" onclick="go('claim');return false">እዚህ ይመለሱ</a></p>` : ''}
     <p class="muted" style="text-align:center">ምዝገባ፣ ኢሜይል ወይም ስልክ ቁጥር አያስፈልግም።</p>`;
   initFx();
 }
