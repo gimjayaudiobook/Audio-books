@@ -52,6 +52,8 @@ a{color:var(--brand)}
 .front img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .shine{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 36%,rgba(255,255,255,.34) 48%,transparent 60%);background-size:260% 100%}
 .back{inset:0;transform:rotateY(180deg) translateZ(calc(var(--bt)/2));border-radius:9px 3px 3px 9px;background:linear-gradient(160deg,#2a1a3d,#120a1c);display:flex;align-items:center;justify-content:center;text-align:center;color:#d8b25a;font-weight:700;font-size:28px;line-height:1.3}
+.back{overflow:hidden}
+.back img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .back small{display:block;font:600 11px/1.4 sans-serif;letter-spacing:.22em;opacity:.85;margin-top:8px}
 .spine{width:var(--bt);height:100%;left:calc((var(--bw) - var(--bt))/2);top:0;transform:rotateY(-90deg) translateZ(calc(var(--bw)/2));background:#1a0d26;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#d8b25a;font-weight:700}
 .spine img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
@@ -215,7 +217,7 @@ function home(){
         <div class="face front"><b>ግምጃዬ</b>
           <img src="book-front.jpg" alt="ግምጃዬ — Audiobook Edition" draggable="false" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='book-front.jpeg'}else{this.remove()}">
           <i class="shine"></i></div>
-        <div class="face back"><span>ግምጃዬ<small style="letter-spacing:.03em;font-size:13px">ሲራክ ወንድሙ እንደጻፈው</small><small>AUDIOBOOK EDITION</small></span></div>
+        <div class="face back"><span>ግምጃዬ<small style="letter-spacing:.03em;font-size:13px">ሲራክ ወንድሙ እንደጻፈው</small><small>AUDIOBOOK EDITION</small></span><img src="book-back.jpg" alt="" draggable="false" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='book-back.jpeg'}else{this.remove()}"></div>
         <div class="face spine"><span>ግምጃዬ</span><img src="book-spine.jpg" alt="" draggable="false" onerror="if(!this.dataset.t){this.dataset.t=1;this.src='book-spine.jpeg'}else{this.remove()}"></div>
         <div class="face pages"></div>
         <div class="face top"></div>
