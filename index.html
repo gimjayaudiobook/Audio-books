@@ -418,7 +418,7 @@ function initBook(reduce){
       const [a, b] = ranges[i];
       const w = Math.max(0, Math.min(1, (p - (a - F)) / F)) * Math.max(0, Math.min(1, ((b + F) - p) / F));
       el.style.opacity = w;
-      el.style.transform = `translateY(${(1 - w) * 28}px)`;
+      el.style.transform = `translateY(${(p < a ? -1 : 1) * (1 - w) * 70}px)`;
       el.style.pointerEvents = w > .6 ? 'auto' : 'none';
     });
     document.querySelectorAll('.marq-t').forEach(el => {
