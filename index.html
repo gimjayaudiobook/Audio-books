@@ -157,6 +157,13 @@ input,select{background:#0f0c14;color:var(--ink);border-color:var(--line)}
 .reveal{transform:translateY(30px)}
 .social a{display:inline-flex;align-items:center;gap:8px}
 .social .ico{width:26px;height:26px;border-radius:7px;display:block}
+
+/* ===== ድምፅ + ወርቃማ ፋይበር ===== */
+.ring{display:none}
+.fx{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#snd{white-space:nowrap}
+#snd.pulse{animation:pls 1.8s ease-in-out infinite}
+@keyframes pls{0%,100%{box-shadow:0 0 0 0 rgba(216,178,90,.0)}50%{box-shadow:0 0 14px 3px rgba(216,178,90,.55)}}
 </style>
 </head>
 <body>
@@ -217,7 +224,7 @@ async function loadAll(){
     isAdmin = !!a.data;
   }
   await loadStatus();
-  renderNav();
+  renderNav(); Snd.ui();
 }
 async function loadStatus(){
   myStatus = 'none';
@@ -226,13 +233,82 @@ async function loadStatus(){
   if (data) myStatus = data;
 }
 function renderNav(){
-  $('#nav').innerHTML = `<button onclick="go('library')">🎧 አዳምጥ</button>` +
+  $('#nav').innerHTML = `<button id="snd" onclick="Snd.toggle()"></button><button onclick="go('library')">🎧 አዳምጥ</button>` +
     (isAdmin ? `<button onclick="go('admin')">አድሚን ገጽ</button><button onclick="adminLogout()">ውጣ</button>` : '');
+  Snd.ui();
 }
 function go(view, arg){
-  window.scrollTo(0,0);
+  window.scrollTo(0,0); Snd.view(view);
   ({home, buy, claim, library, admin, adminLogin})[view](arg);
 }
+
+
+/* ---------- ድምፅ (በ Web Audio የተሠራ፣ ምንም ፋይል አያስፈልግም) ---------- */
+const Snd = {
+  on: false, ctx: null, vol: 1, v: 'home', ducked: false, lastIdx: -1,
+  init(){
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
+    const c = this.ctx = new C();
+    const m = this.master = c.createGain(); m.gain.value = 0; m.connect(c.destination);
+    const lp = this.lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.Q.value = .7; lp.connect(m);
+    [[55, 'sine', .5], [82.41, 'sine', .32], [110.2, 'triangle', .18], [164.8, 'sine', .1]].forEach(([f, ty, g]) => {
+      const o = c.createOscillator(); o.type = ty; o.frequency.value = f; o.detune.value = (Math.random() - .5) * 12;
+      const gg = c.createGain(); gg.gain.value = g * .22; o.connect(gg); gg.connect(lp); o.start();
+    });
+    const lfo = c.createOscillator(); lfo.frequency.value = .07;
+    const lg = c.createGain(); lg.gain.value = 120; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+    const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const n = c.createBufferSource(); n.buffer = buf; n.loop = true;
+    const bp = this.bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = .6;
+    const air = this.air = c.createGain(); air.gain.value = 0;
+    n.connect(bp); bp.connect(air); air.connect(m); n.start();
+    const dl = c.createDelay(1); dl.delayTime.value = .32; const fb = c.createGain(); fb.gain.value = .35;
+    dl.connect(fb); fb.connect(dl); dl.connect(m); this.dl = dl;
+    return true;
+  },
+  level(){ return this.on && !this.ducked ? (this.v === 'home' ? .55 : .2) * this.vol : 0; },
+  apply(){ if (this.ctx) this.master.gain.setTargetAtTime(this.level(), this.ctx.currentTime, .4); },
+  toggle(){
+    if (!this.ctx && !this.init()) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.on = !this.on; this.apply(); this.ui();
+    try { localStorage.setItem('snd', this.on ? '1' : '0'); } catch (_) {}
+    if (this.on) this.bell(2);
+  },
+  ui(){
+    const b = document.getElementById('snd'); if (!b) return;
+    b.textContent = this.on ? '🔊 ድምፅ' : '🔇 ድምፅ';
+    b.classList.toggle('pulse', !this.on);
+  },
+  view(v){ this.v = v; this.apply(); },
+  duck(d){ this.ducked = d; this.apply(); },
+  update(p, vel){
+    if (!this.ctx || !this.on) return; const t = this.ctx.currentTime;
+    this.lp.frequency.setTargetAtTime(300 + p * 1100, t, .3);
+    this.air.gain.setTargetAtTime(Math.min(.3, vel * .01), t, .12);
+    this.bp.frequency.setTargetAtTime(500 + vel * 40 + p * 900, t, .15);
+  },
+  bell(i){
+    if (!this.ctx || !this.on) return; const c = this.ctx, t = c.currentTime;
+    const f = [440, 523.25, 659.25, 784, 880][((i % 5) + 5) % 5];
+    [[1, .5], [2.01, .18], [3.97, .07]].forEach(([k, g]) => {
+      const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f * k;
+      const e = c.createGain(); e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g * .5, t + .01);
+      e.gain.exponentialRampToValueAtTime(.0001, t + 2.4);
+      o.connect(e); e.connect(this.master); e.connect(this.dl); o.start(t); o.stop(t + 2.5);
+    });
+  },
+  tick(){
+    if (!this.ctx || !this.on) return; const c = this.ctx, t = c.currentTime;
+    const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(900, t + .06);
+    const e = c.createGain(); e.gain.setValueAtTime(.12, t); e.gain.exponentialRampToValueAtTime(.0001, t + .08);
+    o.connect(e); e.connect(this.master); o.start(t); o.stop(t + .1);
+  }
+};
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button,a,summary') && !e.target.closest('#snd')) Snd.tick(); });
+document.addEventListener('play', e => { if (e.target.tagName === 'AUDIO') Snd.duck(true); }, true);
+['pause', 'ended'].forEach(ev => document.addEventListener(ev, e => { if (e.target.tagName === 'AUDIO') Snd.duck(false); }, true));
 
 /* ---------- ጥቁር ትዕይንት: ሲሸራትቱ መጽሐፉ ይሽከረከራል ---------- */
 function initFx(){
@@ -247,6 +323,41 @@ function initFx(){
       cards.forEach(c => { c.classList.add('reveal'); io.observe(c); });
     }
   } catch (e) { /* ተጽእኖው ባይሰራ ገጹ ይሰራል */ }
+}
+
+
+const FIB = Array.from({ length: 200 }, (_, i) => ({ u: i / 200, ph: Math.random() * 6.28, L: Math.random(), w: Math.random() }));
+function drawFibers(t, p, stage, pin, bw, bh){
+  const cv = document.getElementById('fx'); if (!cv) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), pr = pin.getBoundingClientRect();
+  const W = Math.round(pr.width * dpr), H = Math.round(pr.height * dpr);
+  if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, pr.width, pr.height);
+  const sr = stage.getBoundingClientRect(), cx = sr.left + sr.width / 2 - pr.left, cy = sr.top + sr.height / 2 - pr.top;
+  const ease = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  const mA = ease(p / .45), mB = ease((p - .45) / .4), n = pr.width < 600 ? 120 : 200;
+  g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  for (let k = 0; k < n; k++){
+    const f = FIB[Math.floor(k * FIB.length / n)], u = k / n;
+    // 1) ተንጠልጣይ
+    const sway = Math.sin(t * .8 + f.ph) * 10, hx0 = cx + (u - .5) * bw * 1.6 + sway * .3, hy0 = -10;
+    const hx1 = hx0 + sway + (u - .5) * 24, hy1 = bh * (.35 + f.L * .55);
+    // 2) ቅስት
+    const th1 = -Math.PI + u * Math.PI, R1 = bh * .62, l1 = 16 + f.L * 46;
+    const ax0 = cx + Math.cos(th1) * R1, ay0 = cy + Math.sin(th1) * R1, ax1 = cx + Math.cos(th1) * (R1 + l1), ay1 = cy + Math.sin(th1) * (R1 + l1);
+    // 3) ቀለበት
+    const th2 = u * Math.PI * 2 + t * .06, R2 = bh * .6, l2 = 18 + f.L * 50 + Math.sin(t * 2 + f.ph) * 4;
+    const rx0 = cx + Math.cos(th2) * R2, ry0 = cy + Math.sin(th2) * R2, rx1 = cx + Math.cos(th2) * (R2 + l2), ry1 = cy + Math.sin(th2) * (R2 + l2);
+    const L = (a, b, m) => a + (b - a) * m;
+    let x0 = L(hx0, ax0, mA), y0 = L(hy0, ay0, mA), x1 = L(hx1, ax1, mA), y1 = L(hy1, ay1, mA);
+    x0 = L(x0, rx0, mB); y0 = L(y0, ry0, mB); x1 = L(x1, rx1, mB); y1 = L(y1, ry1, mB);
+    g.strokeStyle = `rgba(216,${150 + f.w * 50 | 0},${60 + f.w * 40 | 0},${.28 + f.L * .4})`;
+    g.lineWidth = .8 + f.w * 1.6;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    g.fillStyle = `rgba(255,226,140,${.55 + .4 * Math.sin(t * 3 + f.ph)})`;
+    g.beginPath(); g.arc(x1, y1, 1 + f.L * 1.8, 0, 6.283); g.fill();
+  }
+  g.globalCompositeOperation = 'source-over';
 }
 
 function initBook(reduce){
@@ -295,6 +406,14 @@ function initBook(reduce){
     const cr = ry * Math.PI / 180;
     shadow.style.transform = `scaleX(${Math.max(.35, Math.abs(Math.cos(cr)) + .13 * Math.abs(Math.sin(cr)))})`;
     shine.style.backgroundPosition = `${50 - (ry - 24) * 2.2}% 0`;
+
+    // ወርቃማ ፋይበር: ከላይ የተንጠለጠሉ ክሮች → ቅስት → በመጽሐፉ ዙሪያ ቀለበት
+    drawFibers(t, p, stage, pin, bw, bh);
+    const sy = scrollY, sv = Math.abs(sy - (frame.ly ?? sy)); frame.ly = sy; frame.sv = (frame.sv || 0) * .85 + sv * .15;
+    Snd.update(p, frame.sv + Math.abs(vel) * .5);
+    let bi = -1, bwt = .5;
+    slides.forEach((el, i) => { const o = +el.style.opacity; if (o > bwt){ bwt = o; bi = i; } });
+    if (bi >= 0 && bi !== Snd.lastIdx){ Snd.lastIdx = bi; Snd.bell(bi); }
     slides.forEach((el, i) => {
       const [a, b] = ranges[i];
       const w = Math.max(0, Math.min(1, (p - (a - F)) / F)) * Math.max(0, Math.min(1, ((b + F) - p) / F));
@@ -319,6 +438,7 @@ function home(){
   app.innerHTML = `
     ${anonFailed ? '<div class="msg err">ድረ-ገጹ ገና አልተዘጋጀም (Anonymous sign-ins አልበራም)።</div>' : ''}
     <section class="scene" id="scene"><div class="pin">
+      <canvas class="fx" id="fx"></canvas>
       <div class="stage" id="stage" aria-label="ግምጃዬ — Audiobook Edition">
         <div class="ring"></div>
         <div class="shadow"></div>
